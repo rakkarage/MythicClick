@@ -1,0 +1,10 @@
+## Interface: 120001
+## Title: MythicQuickAction
+## Notes: Left click dungeon buttons to teleport. Right click to search LFG at your season best key level.
+## Author: You
+## Version: 1.0.0
+## SavedVariables: MythicQuickActionDB
+## Dependencies:
+## OptionalDeps: Blizzard_ChallengesUI
+
+MythicQuickAction.lua
