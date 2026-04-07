@@ -1,5 +1,5 @@
 -- MythicQuickAction - Midnight Season 1
-local addonName, addon = ...
+local addonName, ns = ...
 
 local DUNGEON_DATA = {
 	-- [mapID] = { spellID, activityID, activityGroupID }
@@ -7,47 +7,43 @@ local DUNGEON_DATA = {
 	[559] = { 1254563, 1173, 401 }, -- Nexus-Point Xenas
 	[558] = { 1254572, 1172, 399 }, -- Magisters' Terrace
 	[557] = { 1254400, 1171, 370 }, -- Windrunner Spire
-	[402] = { 393273, 1162, 302 },  -- Algeth'ar Academy
+	[402] = { 393273, 1162, 302 }, -- Algeth'ar Academy
 	[239] = { 1254551, 1176, 133 }, -- Seat of the Triumvirate
-	[161] = { 1254557, 1175, 9 },   -- Skyreach
-	[556] = { 1254555, 1170, 52 },  -- Pit of Saron
+	[161] = { 1254557, 1175, 9 }, -- Skyreach
+	[556] = { 1254555, 1170, 52 }, -- Pit of Saron
 }
 
 -- Global function to handle Right-Click (LFG)
 function MQA_OpenLFG(mapID)
 	local data = DUNGEON_DATA[mapID]
-	if not data or not data[3] then return end
+	if not data then return end
+	local groupID = data[3]    -- the activityGroupID you already stored
 
-	local activityID = data[2]
-	local groupID = data[3]
+	-- 1. Get current advanced filter and modify it
+	local filter = C_LFGList.GetAdvancedFilter()
+	filter.activities = { groupID } -- only this dungeon group
 
-	-- 1. Ensure UI is loaded
-	if not PVEFrame then UIParentLoadAddOn("Blizzard_LFGUI") end
-	PVEFrame_ShowFrame("GroupFinderFrame", LFGListPVEStub)
+	-- 2. Set difficulties: only Mythic+
+	filter.difficultyNormal = false
+	filter.difficultyHeroic = false
+	filter.difficultyMythic = false
+	filter.difficultyMythicPlus = true
 
-	-- 2. Select Dungeons Category
-	LFGListCategorySelection_SelectCategory(LFGListFrame.CategorySelection, 2, 0)
-
-	-- 3. APPLY ADVANCED FILTER (The PGF Secret Sauce)
-	local filter = {
-		activities = { groupID }, -- This is the key array!
-		difficultyNormal = true,
-		difficultyHeroic = true,
-		difficultyMythic = true,
-		difficultyMythicPlus = true,
-	}
+	-- 3. Save the filter
 	C_LFGList.SaveAdvancedFilter(filter)
 
-	-- 4. Sync the visual UI
-	local p = LFGListFrame.SearchPanel
-	LFGListSearchPanel_Clear(p)
-	p.filters = { [activityID] = true } -- Still set this for the checkbox visual
+	-- 4. Open LFG UI and search
+	if not PVEFrame then UIParentLoadAddOn("Blizzard_LFGUI") end
+	PVEFrame_ShowFrame("GroupFinderFrame", "LFGListPVEStub")
+	LFGListCategorySelection_SelectCategory(LFGListFrame.CategorySelection, 2, 0)
 
-	-- 5. Transition to Results
-	LFGListFrame.CategorySelection:Hide()
-	p:Show()
+	-- 5. Click "Find Group" to apply the filter and show results
+	local findBtn = LFGListFrame.CategorySelection and LFGListFrame.CategorySelection.FindGroupButton
+	if findBtn and findBtn:IsEnabled() then
+		findBtn:Click()
+	end
 
-	print("|cffffff00MQA:|r Advanced Filter set for Group " .. groupID)
+	print("|cffffff00MQA:|r Filter set to Mythic+ dungeon group " .. groupID)
 end
 
 local function IsSpellKnownAndReady(spellID)
@@ -57,7 +53,13 @@ end
 
 local function InitButton(button)
 	button:SetAllPoints()
-	button:SetFrameLevel(999)
+
+	-- Sync frame level so it's exactly 1 layer above the icon
+	local parent = button:GetParent()
+	if parent then
+		button:SetFrameLevel(parent:GetFrameLevel() + 1)
+	end
+
 	button:RegisterForClicks("AnyUp", "AnyDown")
 
 	local highlight = button:CreateTexture(nil, "OVERLAY")
@@ -67,12 +69,33 @@ local function InitButton(button)
 	highlight:Hide()
 	button.highlight = highlight
 
+	-- Pass Tooltip events to the parent (the Dungeon Icon)
+	button:SetScript("OnEnter", function(self)
+		local p = self:GetParent()
+		if p and p:GetScript("OnEnter") then
+			-- This triggers the native Blizzard "Dungeon Info" tooltip
+			p:GetScript("OnEnter")(p)
+		end
+		-- Visual feedback for the teleport highlight
+		if self.spellID then self.highlight:SetAlpha(0.7) end
+	end)
+
+	button:SetScript("OnLeave", function(self)
+		local p = self:GetParent()
+		if p and p:GetScript("OnLeave") then
+			p:GetScript("OnLeave")(p)
+		end
+		GameTooltip:Hide()
+		if self.spellID then self.highlight:SetAlpha(1.0) end
+	end)
+
 	function button:UpdateHighlight()
 		self.highlight:SetShown(self.spellID ~= nil and IsSpellKnownAndReady(self.spellID))
 	end
 
 	button:HookScript("OnClick", function(self, mouseButton)
 		if mouseButton == "LeftButton" then
+			-- Left click is handled by the SecureAttribute (Teleport)
 			print("|cffffff00MQA:|r Attempting teleport for Map " .. tostring(self.mapID))
 		end
 	end)
@@ -90,7 +113,6 @@ local function ProcessIcon(icon)
 	if InCombatLockdown() then return end
 
 	local mapID = icon.mapID
-	-- FIXED: Reference correct table name and handle the new {spell, activity} structure
 	local data = mapID and DUNGEON_DATA[mapID] or nil
 	local spellID = data and data[1] or nil
 
@@ -109,12 +131,10 @@ local function ProcessIcon(icon)
 		button.highlight:Hide()
 	end
 
-	-- RIGHT CLICK: LFG
-	-- RIGHT CLICK: Setup UI + Click Search
+	-- RIGHT CLICK: Open LFG filtered to this dungeon
 	if mapID then
 		button:SetAttribute("type2", "macro")
-		-- The macro runs your function, then programmatically clicks the 'Refresh' button
-		button:SetAttribute("macrotext2", string.format("/run MQA_OpenLFG(%d)\n/click LFGListFrame.SearchPanel.SearchButton", mapID))
+		button:SetAttribute("macrotext2", string.format("/run MQA_OpenLFG(%d)", mapID))
 	end
 end
 
@@ -122,6 +142,15 @@ local function OnChallengesFrameUpdate()
 	if not ChallengesFrame or not ChallengesFrame.DungeonIcons then return end
 	for _, icon in ipairs(ChallengesFrame.DungeonIcons) do
 		ProcessIcon(icon)
+	end
+end
+
+-- Ensures categoryID is always valid before DoSearch fires.
+-- Fixes the infinite spinner after clicking the clear (X) button,
+-- which wipes categoryID and causes C_LFGList.Search to receive nil.
+local function EnsureCategoryID(searchPanel)
+	if searchPanel and not searchPanel.categoryID then
+		searchPanel.categoryID = 2
 	end
 end
 
@@ -136,6 +165,10 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 		if ChallengesFrame then
 			hooksecurefunc(ChallengesFrame, "Update", OnChallengesFrameUpdate)
 			OnChallengesFrameUpdate()
+		end
+		-- Hook DoSearch so categoryID is always valid (fixes infinite spinner after clear)
+		if LFGListFrame and LFGListFrame.SearchPanel then
+			hooksecurefunc("LFGListSearchPanel_DoSearch", EnsureCategoryID)
 		end
 	elseif event == "SPELLS_CHANGED" or event == "PLAYER_REGEN_ENABLED" then
 		if not InCombatLockdown() then OnChallengesFrameUpdate() end
