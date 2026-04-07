@@ -1,4 +1,5 @@
--- MythicQuickAction - Midnight Season 1
+-- 🖱️ MythicClick: Teleports highlighted. Left click teleport. Right click LFG.
+
 local addonName, ns = ...
 
 local DUNGEON_DATA = {
