@@ -4,7 +4,5 @@
 ## Author: You
 ## Version: 1.0.0
 ## SavedVariables: MythicQuickActionDB
-## Dependencies:
-## OptionalDeps: Blizzard_ChallengesUI
 
 MythicQuickAction.lua
