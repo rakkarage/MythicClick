@@ -2,8 +2,8 @@
 
 local addonName, ns = ...
 
+-- [mapID] = { spellID, activityID, activityGroupID }
 local DUNGEON_DATA = {
-	-- [mapID] = { spellID, activityID, activityGroupID }
 	[560] = { 1254559, 1174, 400 }, -- Maisara Caverns
 	[559] = { 1254563, 1173, 401 }, -- Nexus-Point Xenas
 	[558] = { 1254572, 1172, 399 }, -- Magisters' Terrace
@@ -14,31 +14,23 @@ local DUNGEON_DATA = {
 	[556] = { 1254555, 1170, 52 }, -- Pit of Saron
 }
 
--- Global function to handle Right-Click (LFG)
 function MythicClick_OpenLFG(mapID)
 	local data = DUNGEON_DATA[mapID]
 	if not data then return end
-	local groupID = data[3] -- the activityGroupID you already stored
+	local groupID = data[3]
 
-	-- 1. Get current advanced filter and modify it
 	local filter = C_LFGList.GetAdvancedFilter()
-	filter.activities = { groupID } -- only this dungeon group
-
-	-- 2. Set difficulties: only Mythic+
+	filter.activities = { groupID }
 	filter.difficultyNormal = false
 	filter.difficultyHeroic = false
 	filter.difficultyMythic = false
 	filter.difficultyMythicPlus = true
-
-	-- 3. Save the filter
 	C_LFGList.SaveAdvancedFilter(filter)
 
-	-- 4. Open LFG UI and search
 	if not PVEFrame then UIParentLoadAddOn("Blizzard_LFGUI") end
 	PVEFrame_ShowFrame("GroupFinderFrame", "LFGListPVEStub")
 	LFGListCategorySelection_SelectCategory(LFGListFrame.CategorySelection, 2, 0)
 
-	-- 5. Click "Find Group" to apply the filter and show results
 	local findBtn = LFGListFrame.CategorySelection and LFGListFrame.CategorySelection.FindGroupButton
 	if findBtn and findBtn:IsEnabled() then
 		findBtn:Click()
@@ -53,7 +45,6 @@ end
 local function InitButton(button)
 	button:SetAllPoints()
 
-	-- Sync frame level so it's exactly 1 layer above the icon
 	local parent = button:GetParent()
 	if parent then
 		button:SetFrameLevel(parent:GetFrameLevel() + 1)
@@ -68,7 +59,6 @@ local function InitButton(button)
 	highlight:Hide()
 	button.highlight = highlight
 
-	-- Pass Tooltip events to the parent (the Dungeon Icon)
 	button:SetScript("OnEnter", function(self)
 		local p = self:GetParent()
 		if p and p:GetScript("OnEnter") then
@@ -78,13 +68,10 @@ local function InitButton(button)
 		if self.spellID then
 			self.highlight:SetAlpha(0.7)
 
-			-- Dynamic tooltip line
 			GameTooltip:AddLine(" ")
 			if self.hasSpell then
-				-- GameTooltip:AddLine("|cff80ff80Left Click|r: Teleport")
 				GameTooltip:AddLine("Left Click: |cff80ff80Teleport|r")
 			end
-			-- GameTooltip:AddLine("|cff80ff80Right Click|r: LFG")
 			GameTooltip:AddLine("Right Click: |cff80ff80LFG|r")
 			GameTooltip:Show()
 		end
@@ -114,12 +101,9 @@ local function ProcessIcon(icon)
 	local mapID = icon.mapID
 	local data = mapID and DUNGEON_DATA[mapID] or nil
 	local spellID = data and data[1] or nil
-
 	local button = GetOrCreateButton(icon)
 	button.mapID = mapID
 	button.spellID = spellID
-
-	-- Check once and cache on the button
 	local hasSpell = spellID and IsSpellKnownAndReady(spellID)
 	button.hasSpell = hasSpell
 
@@ -133,7 +117,6 @@ local function ProcessIcon(icon)
 		button.highlight:Hide()
 	end
 
-	-- RIGHT CLICK: Open LFG filtered to this dungeon
 	if mapID then
 		button:SetAttribute("type2", "macro")
 		button:SetAttribute("macrotext2", string.format("/run MythicClick_OpenLFG(%d)", mapID))
@@ -147,12 +130,10 @@ local function OnChallengesFrameUpdate()
 	end
 end
 
--- Setup and Events
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("SPELLS_CHANGED")
 eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" and (arg1 == "Blizzard_ChallengesUI" or arg1 == addonName) then
 		if ChallengesFrame then
