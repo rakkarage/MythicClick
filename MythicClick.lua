@@ -72,11 +72,22 @@ local function InitButton(button)
 	button:SetScript("OnEnter", function(self)
 		local p = self:GetParent()
 		if p and p:GetScript("OnEnter") then
-			-- This triggers the native Blizzard "Dungeon Info" tooltip
 			p:GetScript("OnEnter")(p)
 		end
-		-- Visual feedback for the teleport highlight
-		if self.spellID then self.highlight:SetAlpha(0.7) end
+
+		if self.spellID then
+			self.highlight:SetAlpha(0.7)
+
+			-- Dynamic tooltip line
+			GameTooltip:AddLine(" ")
+			if self.hasSpell then
+				-- GameTooltip:AddLine("|cff80ff80Left Click|r: Teleport")
+				GameTooltip:AddLine("Left Click: |cff80ff80Teleport|r")
+			end
+			-- GameTooltip:AddLine("|cff80ff80Right Click|r: LFG")
+			GameTooltip:AddLine("Right Click: |cff80ff80LFG|r")
+			GameTooltip:Show()
+		end
 	end)
 
 	button:SetScript("OnLeave", function(self)
@@ -108,8 +119,11 @@ local function ProcessIcon(icon)
 	button.mapID = mapID
 	button.spellID = spellID
 
-	-- LEFT CLICK: Teleport
-	if spellID and IsSpellKnownAndReady(spellID) then
+	-- Check once and cache on the button
+	local hasSpell = spellID and IsSpellKnownAndReady(spellID)
+	button.hasSpell = hasSpell
+
+	if hasSpell then
 		local spellName = C_Spell.GetSpellName(spellID)
 		button:SetAttribute("type1", "spell")
 		button:SetAttribute("spell1", spellName)
