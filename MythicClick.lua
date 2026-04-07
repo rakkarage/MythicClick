@@ -15,10 +15,10 @@ local DUNGEON_DATA = {
 }
 
 -- Global function to handle Right-Click (LFG)
-function MQA_OpenLFG(mapID)
+function MythicClick_OpenLFG(mapID)
 	local data = DUNGEON_DATA[mapID]
 	if not data then return end
-	local groupID = data[3]    -- the activityGroupID you already stored
+	local groupID = data[3] -- the activityGroupID you already stored
 
 	-- 1. Get current advanced filter and modify it
 	local filter = C_LFGList.GetAdvancedFilter()
@@ -44,7 +44,7 @@ function MQA_OpenLFG(mapID)
 		findBtn:Click()
 	end
 
-	print("|cffffff00MQA:|r Filter set to Mythic+ dungeon group " .. groupID)
+	print("|cffffff00MythicClick:|r Filter set to Mythic+ dungeon group " .. groupID)
 end
 
 local function IsSpellKnownAndReady(spellID)
@@ -97,16 +97,16 @@ local function InitButton(button)
 	button:HookScript("OnClick", function(self, mouseButton)
 		if mouseButton == "LeftButton" then
 			-- Left click is handled by the SecureAttribute (Teleport)
-			print("|cffffff00MQA:|r Attempting teleport for Map " .. tostring(self.mapID))
+			print("|cffffff00MythicClick:|r Attempting teleport for Map " .. tostring(self.mapID))
 		end
 	end)
 end
 
 local function GetOrCreateButton(icon)
-	if icon.__mqaButton then return icon.__mqaButton end
+	if icon.__mythicClickButton then return icon.__mythicClickButton end
 	local button = CreateFrame("Button", nil, icon, "InsecureActionButtonTemplate")
 	InitButton(button)
-	icon.__mqaButton = button
+	icon.__mythicClickButton = button
 	return button
 end
 
@@ -135,7 +135,7 @@ local function ProcessIcon(icon)
 	-- RIGHT CLICK: Open LFG filtered to this dungeon
 	if mapID then
 		button:SetAttribute("type2", "macro")
-		button:SetAttribute("macrotext2", string.format("/run MQA_OpenLFG(%d)", mapID))
+		button:SetAttribute("macrotext2", string.format("/run MythicClick_OpenLFG(%d)", mapID))
 	end
 end
 
