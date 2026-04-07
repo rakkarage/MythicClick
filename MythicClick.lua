@@ -43,8 +43,6 @@ function MythicClick_OpenLFG(mapID)
 	if findBtn and findBtn:IsEnabled() then
 		findBtn:Click()
 	end
-
-	print("|cffffff00MythicClick:|r Filter set to Mythic+ dungeon group " .. groupID)
 end
 
 local function IsSpellKnownAndReady(spellID)
@@ -88,17 +86,6 @@ local function InitButton(button)
 		end
 		GameTooltip:Hide()
 		if self.spellID then self.highlight:SetAlpha(1.0) end
-	end)
-
-	function button:UpdateHighlight()
-		self.highlight:SetShown(self.spellID ~= nil and IsSpellKnownAndReady(self.spellID))
-	end
-
-	button:HookScript("OnClick", function(self, mouseButton)
-		if mouseButton == "LeftButton" then
-			-- Left click is handled by the SecureAttribute (Teleport)
-			print("|cffffff00MythicClick:|r Attempting teleport for Map " .. tostring(self.mapID))
-		end
 	end)
 end
 
@@ -146,15 +133,6 @@ local function OnChallengesFrameUpdate()
 	end
 end
 
--- Ensures categoryID is always valid before DoSearch fires.
--- Fixes the infinite spinner after clicking the clear (X) button,
--- which wipes categoryID and causes C_LFGList.Search to receive nil.
-local function EnsureCategoryID(searchPanel)
-	if searchPanel and not searchPanel.categoryID then
-		searchPanel.categoryID = 2
-	end
-end
-
 -- Setup and Events
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
@@ -166,10 +144,6 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 		if ChallengesFrame then
 			hooksecurefunc(ChallengesFrame, "Update", OnChallengesFrameUpdate)
 			OnChallengesFrameUpdate()
-		end
-		-- Hook DoSearch so categoryID is always valid (fixes infinite spinner after clear)
-		if LFGListFrame and LFGListFrame.SearchPanel then
-			hooksecurefunc("LFGListSearchPanel_DoSearch", EnsureCategoryID)
 		end
 	elseif event == "SPELLS_CHANGED" or event == "PLAYER_REGEN_ENABLED" then
 		if not InCombatLockdown() then OnChallengesFrameUpdate() end
