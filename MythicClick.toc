@@ -3,6 +3,6 @@
 ## Category: User Interface
 ## Author: rakkarage
 ## Interface: 120001
-## Version: 2026.4
+## Version: v2026.4
 
 MythicClick.lua

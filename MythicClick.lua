@@ -1,6 +1,10 @@
 -- 🖱️ MythicClick: Teleports highlighted. Left click teleport. Right click LFG.
 
-local addonName, _ = ...
+local addonName, ns = ...
+
+ns.MythicClick = CreateFrame("Frame")
+local MythicClick = ns.MythicClick
+MythicClick.name = addonName
 
 -- [mapID] = { spellID, activityGroupID }
 local DUNGEON_DATA = {
@@ -37,12 +41,12 @@ function MythicClick_OpenLFG(mapID)
 	end
 end
 
-local function IsSpellKnown(spellID)
+function IsSpellKnown(spellID)
 	if not spellID or spellID == 0 then return false end
 	return C_SpellBook.IsSpellInSpellBook(spellID, Enum.SpellBookSpellBank.Player, false)
 end
 
-local function InitButton(button)
+function MythicClick:InitButton(button)
 	button:SetAllPoints()
 
 	local parent = button:GetParent()
@@ -87,21 +91,21 @@ local function InitButton(button)
 	end)
 end
 
-local function GetOrCreateButton(icon)
+function MythicClick:GetOrCreateButton(icon)
 	if icon.__mythicClickButton then return icon.__mythicClickButton end
 	local button = CreateFrame("Button", nil, icon, "InsecureActionButtonTemplate")
-	InitButton(button)
+	self:InitButton(button)
 	icon.__mythicClickButton = button
 	return button
 end
 
-local function ProcessIcon(icon)
+function MythicClick:ProcessIcon(icon)
 	if InCombatLockdown() then return end
 
 	local mapID = icon.mapID
 	local data = mapID and DUNGEON_DATA[mapID] or nil
 	local spellID = data and data[1] or nil
-	local button = GetOrCreateButton(icon)
+	local button = self:GetOrCreateButton(icon)
 	button.mapID = mapID
 	button.spellID = spellID
 	local hasSpell = spellID and IsSpellKnown(spellID)
@@ -126,24 +130,25 @@ local function ProcessIcon(icon)
 	end
 end
 
-local function OnChallengesFrameUpdate()
+function MythicClick:OnChallengesFrameUpdate()
 	if not ChallengesFrame or not ChallengesFrame.DungeonIcons then return end
 	for _, icon in ipairs(ChallengesFrame.DungeonIcons) do
-		ProcessIcon(icon)
+		self:ProcessIcon(icon)
 	end
 end
 
-local eventFrame = CreateFrame("Frame")
-eventFrame:RegisterEvent("ADDON_LOADED")
-eventFrame:RegisterEvent("SPELLS_CHANGED")
-eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-eventFrame:SetScript("OnEvent", function(self, event, arg1)
+MythicClick:RegisterEvent("ADDON_LOADED")
+MythicClick:RegisterEvent("SPELLS_CHANGED")
+MythicClick:RegisterEvent("PLAYER_REGEN_ENABLED")
+MythicClick:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" and (arg1 == "Blizzard_ChallengesUI" or arg1 == addonName) then
 		if ChallengesFrame then
-			hooksecurefunc(ChallengesFrame, "Update", OnChallengesFrameUpdate)
-			OnChallengesFrameUpdate()
+			hooksecurefunc(ChallengesFrame, "Update", function()
+				self:OnChallengesFrameUpdate()
+			end)
+			self:OnChallengesFrameUpdate()
 		end
 	elseif event == "SPELLS_CHANGED" or event == "PLAYER_REGEN_ENABLED" then
-		if not InCombatLockdown() then OnChallengesFrameUpdate() end
+		if not InCombatLockdown() then self:OnChallengesFrameUpdate() end
 	end
 end)
