@@ -2,6 +2,7 @@
 ## Notes: Teleports highlighted. Left click teleport. Right click LFG.
 ## Category: User Interface
 ## Author: rakkarage
+## IconTexture: Interface/AddOns/MythicClick/MythicClick.png
 ## Interface: 120001
 ## Version: v2026.4
 

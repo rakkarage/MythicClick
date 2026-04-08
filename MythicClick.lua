@@ -18,7 +18,7 @@ local DUNGEON_DATA = {
 	[556] = { 1254555, 52 }, -- Pit of Saron
 }
 
-function MythicClick_OpenLFG(mapID)
+function MythicClick:OpenLFG(mapID)
 	local data = DUNGEON_DATA[mapID]
 	if not data then return end
 	local groupID = data[2]
@@ -41,7 +41,12 @@ function MythicClick_OpenLFG(mapID)
 	end
 end
 
-function IsSpellKnown(spellID)
+-- Keep compatibility for secure macro execution.
+function MythicClick_OpenLFG(mapID)
+	MythicClick:OpenLFG(mapID)
+end
+
+function MythicClick:IsSpellKnown(spellID)
 	if not spellID or spellID == 0 then return false end
 	return C_SpellBook.IsSpellInSpellBook(spellID, Enum.SpellBookSpellBank.Player, false)
 end
@@ -108,7 +113,7 @@ function MythicClick:ProcessIcon(icon)
 	local button = self:GetOrCreateButton(icon)
 	button.mapID = mapID
 	button.spellID = spellID
-	local hasSpell = spellID and IsSpellKnown(spellID)
+	local hasSpell = spellID and self:IsSpellKnown(spellID)
 	button.hasSpell = hasSpell
 
 	if hasSpell then
