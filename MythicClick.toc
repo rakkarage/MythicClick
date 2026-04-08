@@ -3,6 +3,5 @@
 ## Notes: Teleports highlighted. Left click teleport. Right click LFG.
 ## Author: rakkarage
 ## Version: 2026.4
-## SavedVariables: MythicClickDB
 
 MythicClick.lua

@@ -1,23 +1,23 @@
 -- 🖱️ MythicClick: Teleports highlighted. Left click teleport. Right click LFG.
 
-local addonName, ns = ...
+local addonName, _ = ...
 
--- [mapID] = { spellID, activityID, activityGroupID }
+-- [mapID] = { spellID, activityGroupID }
 local DUNGEON_DATA = {
-	[560] = { 1254559, 1174, 400 }, -- Maisara Caverns
-	[559] = { 1254563, 1173, 401 }, -- Nexus-Point Xenas
-	[558] = { 1254572, 1172, 399 }, -- Magisters' Terrace
-	[557] = { 1254400, 1171, 370 }, -- Windrunner Spire
-	[402] = { 393273, 1162, 302 }, -- Algeth'ar Academy
-	[239] = { 1254551, 1176, 133 }, -- Seat of the Triumvirate
-	[161] = { 1254557, 1175, 9 }, -- Skyreach
-	[556] = { 1254555, 1170, 52 }, -- Pit of Saron
+	[560] = { 1254559, 400 }, -- Maisara Caverns
+	[559] = { 1254563, 401 }, -- Nexus-Point Xenas
+	[558] = { 1254572, 399 }, -- Magisters' Terrace
+	[557] = { 1254400, 370 }, -- Windrunner Spire
+	[402] = { 393273, 302 }, -- Algeth'ar Academy
+	[239] = { 1254551, 133 }, -- Seat of the Triumvirate
+	[161] = { 1254557, 9 }, -- Skyreach
+	[556] = { 1254555, 52 }, -- Pit of Saron
 }
 
 function MythicClick_OpenLFG(mapID)
 	local data = DUNGEON_DATA[mapID]
 	if not data then return end
-	local groupID = data[3]
+	local groupID = data[2]
 
 	local filter = C_LFGList.GetAdvancedFilter()
 	filter.activities = { groupID }
@@ -37,7 +37,7 @@ function MythicClick_OpenLFG(mapID)
 	end
 end
 
-local function IsSpellKnownAndReady(spellID)
+local function IsSpellKnown(spellID)
 	if not spellID or spellID == 0 then return false end
 	return C_SpellBook.IsSpellInSpellBook(spellID, Enum.SpellBookSpellBank.Player, false)
 end
@@ -104,7 +104,7 @@ local function ProcessIcon(icon)
 	local button = GetOrCreateButton(icon)
 	button.mapID = mapID
 	button.spellID = spellID
-	local hasSpell = spellID and IsSpellKnownAndReady(spellID)
+	local hasSpell = spellID and IsSpellKnown(spellID)
 	button.hasSpell = hasSpell
 
 	if hasSpell then
@@ -120,6 +120,9 @@ local function ProcessIcon(icon)
 	if mapID then
 		button:SetAttribute("type2", "macro")
 		button:SetAttribute("macrotext2", string.format("/run MythicClick_OpenLFG(%d)", mapID))
+	else
+		button:SetAttribute("type2", nil)
+		button:SetAttribute("macrotext2", nil)
 	end
 end
 
