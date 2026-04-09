@@ -19,6 +19,9 @@ local DUNGEON_DATA = {
 	[556] = { 1254555, 52 }, -- Pit of Saron
 }
 
+local BORDER_IDLE_ALPHA = 0.75
+local BORDER_HOVER_ALPHA = 1.0
+
 function MythicClick:OpenLFG(mapID)
 	local data = DUNGEON_DATA[mapID]
 	if not data then return end
@@ -66,6 +69,7 @@ function MythicClick:InitButton(button)
 	highlight:SetTexture("Interface\\EncounterJournal\\UI-EncounterJournalTextures")
 	highlight:SetTexCoord(0.34570313, 0.68554688, 0.33300781, 0.42675781)
 	highlight:SetAllPoints()
+	highlight:SetAlpha(BORDER_IDLE_ALPHA)
 	highlight:Hide()
 	button.highlight = highlight
 
@@ -76,7 +80,7 @@ function MythicClick:InitButton(button)
 		end
 
 		if self.spellID then
-			self.highlight:SetAlpha(1.0)
+			self.highlight:SetAlpha(BORDER_HOVER_ALPHA)
 
 			if GameTooltip:GetOwner() == p then
 				GameTooltip:AddLine(" ")
@@ -95,7 +99,7 @@ function MythicClick:InitButton(button)
 			p:GetScript("OnLeave")(p)
 		end
 		GameTooltip:Hide()
-		if self.spellID then self.highlight:SetAlpha(0.7) end
+		if self.spellID then self.highlight:SetAlpha(BORDER_IDLE_ALPHA) end
 	end)
 end
 
@@ -123,6 +127,7 @@ function MythicClick:ProcessIcon(icon)
 		local spellName = C_Spell.GetSpellName(spellID)
 		button:SetAttribute("type1", "spell")
 		button:SetAttribute("spell1", spellName)
+		button.highlight:SetAlpha(BORDER_IDLE_ALPHA)
 		button.highlight:Show()
 	else
 		button:SetAttribute("type1", nil)
