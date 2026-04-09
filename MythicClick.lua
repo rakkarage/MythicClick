@@ -6,6 +6,7 @@ ns.MythicClick = CreateFrame("Frame")
 local MythicClick = ns.MythicClick
 MythicClick.name = addonName
 
+-- TODO: update this data when new dungeons are added or spellIDs change
 -- [mapID] = { spellID, activityGroupID }
 local DUNGEON_DATA = {
 	[560] = { 1254559, 400 }, -- Maisara Caverns
@@ -48,7 +49,7 @@ end
 
 function MythicClick:IsSpellKnown(spellID)
 	if not spellID or spellID == 0 then return false end
-	return C_SpellBook.IsSpellInSpellBook(spellID, Enum.SpellBookSpellBank.Player, false)
+	return C_SpellBook.IsSpellInSpellBook(spellID, Enum.SpellBookSpellBank.Player)
 end
 
 function MythicClick:InitButton(button)
@@ -59,7 +60,7 @@ function MythicClick:InitButton(button)
 		button:SetFrameLevel(parent:GetFrameLevel() + 1)
 	end
 
-	button:RegisterForClicks("AnyUp", "AnyDown")
+	button:RegisterForClicks("AnyDown", "AnyUp")
 
 	local highlight = button:CreateTexture(nil, "OVERLAY")
 	highlight:SetTexture("Interface\\EncounterJournal\\UI-EncounterJournalTextures")
@@ -75,14 +76,16 @@ function MythicClick:InitButton(button)
 		end
 
 		if self.spellID then
-			self.highlight:SetAlpha(0.7)
+			self.highlight:SetAlpha(1.0)
 
-			GameTooltip:AddLine(" ")
-			if self.hasSpell then
-				GameTooltip:AddLine("Left Click: |cff80ff80Teleport|r")
+			if GameTooltip:GetOwner() == p then
+				GameTooltip:AddLine(" ")
+				if self.hasSpell then
+					GameTooltip:AddLine("Left Click: |cff80ff80Teleport|r")
+				end
+				GameTooltip:AddLine("Right Click: |cff80ff80LFG|r")
+				GameTooltip:Show()
 			end
-			GameTooltip:AddLine("Right Click: |cff80ff80LFG|r")
-			GameTooltip:Show()
 		end
 	end)
 
@@ -92,7 +95,7 @@ function MythicClick:InitButton(button)
 			p:GetScript("OnLeave")(p)
 		end
 		GameTooltip:Hide()
-		if self.spellID then self.highlight:SetAlpha(1.0) end
+		if self.spellID then self.highlight:SetAlpha(0.7) end
 	end)
 end
 
@@ -147,7 +150,8 @@ MythicClick:RegisterEvent("SPELLS_CHANGED")
 MythicClick:RegisterEvent("PLAYER_REGEN_ENABLED")
 MythicClick:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" and (arg1 == "Blizzard_ChallengesUI" or arg1 == addonName) then
-		if ChallengesFrame then
+		if ChallengesFrame and not self.hooked then
+			self.hooked = true
 			hooksecurefunc(ChallengesFrame, "Update", function()
 				self:OnChallengesFrameUpdate()
 			end)
