@@ -1,5 +1,5 @@
 ## Title: MythicClick
-## Notes: Teleports highlighted. Left click teleport. Right click LFG.
+## Notes: Awarded teleports highlighted. Left click: Teleport. Right click: LFG.
 ## Category: User Interface
 ## Author: rakkarage
 ## IconTexture: Interface/AddOns/MythicClick/MythicClick.png

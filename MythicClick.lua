@@ -1,4 +1,4 @@
--- 🖱️ MythicClick: Teleports highlighted. Left click teleport. Right click LFG.
+-- 🖱️ MythicClick: Awarded teleports highlighted. Left click: Teleport. Right click: LFG.
 
 local addonName, ns = ...
 
@@ -19,14 +19,14 @@ local DUNGEON_DATA = {
 	[556] = { 1254555, 52 }, -- Pit of Saron
 }
 
-local BORDER_IDLE_ALPHA = 0.75
-local BORDER_HOVER_ALPHA = 1.0
+local BORDER_ALPHA = 0.75
+local BORDER_HOVER = 1.0
 local CASTBAR_COLOR = { 0.2, 0.8, 1.0 }
-local CASTBAR_TEXTURE_DEFAULT = "Interface\\TargetingFrame\\UI-StatusBar"
-local CASTBAR_SPARK_TEXTURE = "Interface\\CastingBar\\UI-CastingBar-Spark"
-local TOOLTIP_TELEPORT_READY_TEXT = "Left Click: |cff80ff80Teleport|r"
-local TOOLTIP_TELEPORT_COOLDOWN_TEXT = "Left Click: |cffff8080Teleport (Cooldown)|r"
-local TOOLTIP_LFG_TEXT = "Right Click: |cff80ff80LFG|r"
+local CASTBAR = "Interface\\TargetingFrame\\UI-StatusBar"
+local CASTBAR_SPARK = "Interface\\CastingBar\\UI-CastingBar-Spark"
+local TOOLTIP_PORT = "Left Click: |cff80ff80Teleport|r"
+local TOOLTIP_PORT_COOLDOWN = "Left Click: |cffff8080Teleport (Cooldown)|r"
+local TOOLTIP_LFG = "Right Click: |cff80ff80LFG|r"
 
 function MythicClick:OpenLFG(mapID)
 	local data = DUNGEON_DATA[mapID]
@@ -72,7 +72,7 @@ function MythicClick:InitButton(button)
 	button:RegisterForClicks("AnyDown", "AnyUp")
 
 	local castBar = CreateFrame("StatusBar", nil, button)
-	castBar:SetStatusBarTexture(CASTBAR_TEXTURE_DEFAULT)
+	castBar:SetStatusBarTexture(CASTBAR)
 	castBar:SetMinMaxValues(0, 1)
 	castBar:SetValue(0)
 	castBar:SetStatusBarColor(CASTBAR_COLOR[1], CASTBAR_COLOR[2], CASTBAR_COLOR[3])
@@ -91,7 +91,7 @@ function MythicClick:InitButton(button)
 	castBarSpellTex:Hide()
 
 	local castBarSpark = castBar:CreateTexture(nil, "OVERLAY")
-	castBarSpark:SetTexture(CASTBAR_SPARK_TEXTURE)
+	castBarSpark:SetTexture(CASTBAR_SPARK)
 	castBarSpark:SetBlendMode("ADD")
 	castBarSpark:SetSize(30, 30)
 	castBarSpark:Hide()
@@ -106,7 +106,7 @@ function MythicClick:InitButton(button)
 	cooldown:SetDrawSwipe(true)
 	cooldown:SetDrawBling(false)
 	cooldown:SetDrawEdge(false)
-	cooldown:SetSwipeColor(0, 0, 0, 0.55)
+	cooldown:SetSwipeColor(0, 0, 0, 0.75)
 	cooldown:SetHideCountdownNumbers(true)
 	cooldown:Hide()
 	button.cooldown = cooldown
@@ -115,7 +115,7 @@ function MythicClick:InitButton(button)
 	highlight:SetTexture("Interface\\EncounterJournal\\UI-EncounterJournalTextures")
 	highlight:SetTexCoord(0.34570313, 0.68554688, 0.33300781, 0.42675781)
 	highlight:SetAllPoints()
-	highlight:SetAlpha(BORDER_IDLE_ALPHA)
+	highlight:SetAlpha(BORDER_ALPHA)
 	highlight:Hide()
 	button.highlight = highlight
 
@@ -126,18 +126,18 @@ function MythicClick:InitButton(button)
 		end
 
 		if self.spellID then
-			self.highlight:SetAlpha(BORDER_HOVER_ALPHA)
+			self.highlight:SetAlpha(BORDER_HOVER)
 
 			if GameTooltip:GetOwner() == p then
 				GameTooltip:AddLine(" ")
 				if self.hasSpell then
-					local teleportText = TOOLTIP_TELEPORT_READY_TEXT
+					local teleportText = TOOLTIP_PORT
 					if MythicClick:IsSpellOnCooldown(self.spellID) then
-						teleportText = TOOLTIP_TELEPORT_COOLDOWN_TEXT
+						teleportText = TOOLTIP_PORT_COOLDOWN
 					end
 					GameTooltip:AddLine(teleportText)
 				end
-				GameTooltip:AddLine(TOOLTIP_LFG_TEXT)
+				GameTooltip:AddLine(TOOLTIP_LFG)
 				GameTooltip:Show()
 			end
 		end
@@ -149,7 +149,7 @@ function MythicClick:InitButton(button)
 			p:GetScript("OnLeave")(p)
 		end
 		GameTooltip:Hide()
-		if self.spellID then self.highlight:SetAlpha(BORDER_IDLE_ALPHA) end
+		if self.spellID then self.highlight:SetAlpha(BORDER_ALPHA) end
 	end)
 end
 
@@ -355,7 +355,7 @@ function MythicClick:ProcessIcon(icon)
 		local spellName = C_Spell.GetSpellName(spellID)
 		button:SetAttribute("type1", "spell")
 		button:SetAttribute("spell1", spellName)
-		button.highlight:SetAlpha(BORDER_IDLE_ALPHA)
+		button.highlight:SetAlpha(BORDER_ALPHA)
 		button.highlight:Show()
 	else
 		button:SetAttribute("type1", nil)

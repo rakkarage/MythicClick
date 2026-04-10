@@ -2,7 +2,7 @@
 
 ![Options Screenshot](screenshot.png)
 
-Teleports highlighted. Left click teleport. Right click LFG.
+Awarded teleports highlighted. Left click: Teleport. Right click: LFG.
 
 ## Usage
 
