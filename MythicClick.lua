@@ -212,12 +212,6 @@ function MythicClick:UpdateButtonCooldown(button)
 		return
 	end
 
-	if self.lastTeleportSpellID and button.spellID ~= self.lastTeleportSpellID then
-		self:ClearButtonCooldown(button)
-		button.cooldown:Hide()
-		return
-	end
-
 	local startTime, duration, isEnabled, modRate = self:GetSpellCooldownInfo(button.spellID)
 	if isEnabled == 0 or isEnabled == false or startTime <= 0 or duration <= 1.5 then
 		self:ClearButtonCooldown(button)
@@ -418,7 +412,6 @@ MythicClick:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
 	elseif event == "UNIT_SPELLCAST_SUCCEEDED" and arg1 == "player" then
 		local spellID = arg3
 		if self:IsDungeonTeleportSpell(spellID) then
-			self.lastTeleportSpellID = spellID
 			self:UpdateAllCooldowns()
 		end
 	elseif string.match(event, "^UNIT_SPELLCAST") and arg1 == "player" then
