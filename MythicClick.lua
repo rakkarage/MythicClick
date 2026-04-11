@@ -303,7 +303,7 @@ function MythicClick:RefreshCastState()
 	self.activeCastSpellID = spellID
 	self.castProgress = progress
 
-	if spellID then
+	if spellID and ChallengesFrame and ChallengesFrame:IsShown() then
 		if not self.castingUpdateActive then
 			self.castingUpdateActive = true
 			self:SetScript("OnUpdate", function(frame, elapsed)
