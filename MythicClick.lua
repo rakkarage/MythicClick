@@ -6,7 +6,6 @@ ns.MythicClick = CreateFrame("Frame")
 local MythicClick = ns.MythicClick
 MythicClick.name = addonName
 
--- TODO: update this data when new dungeons are added or spellIDs change
 -- [mapID] = { spellID, activityGroupID }
 local DUNGEON_DATA = {
 	[560] = { 1254559, 400 }, -- Maisara Caverns
@@ -51,7 +50,6 @@ function MythicClick:OpenLFG(mapID)
 	end
 end
 
--- Keep compatibility for secure macro execution.
 function MythicClick_OpenLFG(mapID)
 	MythicClick:OpenLFG(mapID)
 end
@@ -119,20 +117,20 @@ function MythicClick:InitButton(button)
 	highlight:Hide()
 	button.highlight = highlight
 
-	button:SetScript("OnEnter", function(self)
-		local p = self:GetParent()
+	button:SetScript("OnEnter", function(frame)
+		local p = frame:GetParent()
 		if p and p:GetScript("OnEnter") then
 			p:GetScript("OnEnter")(p)
 		end
 
-		if self.spellID then
-			self.highlight:SetAlpha(BORDER_HOVER)
+		if frame.spellID then
+			frame.highlight:SetAlpha(BORDER_HOVER)
 
 			if GameTooltip:GetOwner() == p then
 				GameTooltip:AddLine(" ")
-				if self.hasSpell then
+				if frame.hasSpell then
 					local teleportText = TOOLTIP_PORT
-					if MythicClick:IsSpellOnCooldown(self.spellID) then
+					if frame:IsSpellOnCooldown(frame.spellID) then
 						teleportText = TOOLTIP_PORT_COOLDOWN
 					end
 					GameTooltip:AddLine(teleportText)
@@ -143,13 +141,13 @@ function MythicClick:InitButton(button)
 		end
 	end)
 
-	button:SetScript("OnLeave", function(self)
-		local p = self:GetParent()
+	button:SetScript("OnLeave", function(frame)
+		local p = frame:GetParent()
 		if p and p:GetScript("OnLeave") then
 			p:GetScript("OnLeave")(p)
 		end
 		GameTooltip:Hide()
-		if self.spellID then self.highlight:SetAlpha(BORDER_ALPHA) end
+		if frame.spellID then frame.highlight:SetAlpha(BORDER_ALPHA) end
 	end)
 end
 
@@ -396,8 +394,10 @@ MythicClick:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
 MythicClick:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
 MythicClick:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
 MythicClick:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-MythicClick:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
-	if event == "ADDON_LOADED" and (arg1 == "Blizzard_ChallengesUI" or arg1 == addonName) then
+MythicClick:SetScript("OnEvent", function(self, event, ...)
+	if event == "ADDON_LOADED" then
+		local name = ...
+		if name ~= self.name and name ~= "Blizzard_ChallengesUI" then return end
 		if ChallengesFrame and not self.hooked then
 			self.hooked = true
 			hooksecurefunc(ChallengesFrame, "Update", function()
@@ -409,12 +409,15 @@ MythicClick:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
 		if not InCombatLockdown() then self:OnChallengesFrameUpdate() end
 	elseif event == "SPELL_UPDATE_COOLDOWN" or event == "ACTIONBAR_UPDATE_COOLDOWN" then
 		self:UpdateAllCooldowns()
-	elseif event == "UNIT_SPELLCAST_SUCCEEDED" and arg1 == "player" then
-		local spellID = arg3
-		if self:IsDungeonTeleportSpell(spellID) then
+	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+		local playerUnit, _, spellID = ...
+		if playerUnit == "player" and self:IsDungeonTeleportSpell(spellID) then
 			self:UpdateAllCooldowns()
 		end
-	elseif string.match(event, "^UNIT_SPELLCAST") and arg1 == "player" then
-		self:RefreshCastState()
+	elseif string.match(event, "^UNIT_SPELLCAST") then
+		local playerUnit = ...
+		if playerUnit == "player" then
+			self:RefreshCastState()
+		end
 	end
 end)
