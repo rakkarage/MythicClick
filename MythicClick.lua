@@ -1,10 +1,22 @@
 -- 🖱️ MythicClick: Awarded teleports highlighted. Left click: Teleport. Right click: LFG.
 
-local addonName, ns = ...
+local addonName = ...
 
-ns.MythicClick = CreateFrame("Frame")
-local MythicClick = ns.MythicClick
-MythicClick.name = addonName
+local frame = CreateFrame("Frame")
+
+local activeCastSpellID, castProgress
+local castUpdateElapsed = 0
+local castingUpdateActive = false
+local hooked = false
+
+local BORDER_ALPHA = 0.75
+local BORDER_HOVER = 1.0
+local CASTBAR_COLOR = { 0.2, 0.8, 1.0 }
+local CASTBAR = "Interface\\TargetingFrame\\UI-StatusBar"
+local CASTBAR_SPARK = "Interface\\CastingBar\\UI-CastingBar-Spark"
+local TOOLTIP_PORT = "Left Click: |cff80ff80Teleport|r"
+local TOOLTIP_PORT_COOLDOWN = "Left Click: |cffff8080Teleport (Cooldown)|r"
+local TOOLTIP_LFG = "Right Click: |cff80ff80LFG|r"
 
 -- [mapID] = { spellID, activityGroupID }
 local DUNGEON_DATA = {
@@ -18,16 +30,7 @@ local DUNGEON_DATA = {
 	[556] = { 1254555, 52 }, -- Pit of Saron
 }
 
-local BORDER_ALPHA = 0.75
-local BORDER_HOVER = 1.0
-local CASTBAR_COLOR = { 0.2, 0.8, 1.0 }
-local CASTBAR = "Interface\\TargetingFrame\\UI-StatusBar"
-local CASTBAR_SPARK = "Interface\\CastingBar\\UI-CastingBar-Spark"
-local TOOLTIP_PORT = "Left Click: |cff80ff80Teleport|r"
-local TOOLTIP_PORT_COOLDOWN = "Left Click: |cffff8080Teleport (Cooldown)|r"
-local TOOLTIP_LFG = "Right Click: |cff80ff80LFG|r"
-
-function MythicClick:OpenLFG(mapID)
+local function OpenLFG(mapID)
 	local data = DUNGEON_DATA[mapID]
 	if not data then return end
 	local groupID = data[2]
@@ -51,15 +54,20 @@ function MythicClick:OpenLFG(mapID)
 end
 
 function MythicClick_OpenLFG(mapID)
-	MythicClick:OpenLFG(mapID)
+	OpenLFG(mapID)
 end
 
-function MythicClick:IsSpellKnown(spellID)
+local function IsSpellKnown(spellID)
 	if not spellID or spellID == 0 then return false end
 	return C_SpellBook.IsSpellInSpellBook(spellID, Enum.SpellBookSpellBank.Player)
 end
 
-function MythicClick:InitButton(button)
+local function IsSpellOnCooldown(spellID)
+	local startTime, duration, isEnabled = GetSpellCooldownInfo(spellID)
+	return isEnabled ~= 0 and isEnabled ~= false and startTime > 0 and duration > 1.5
+end
+
+local function InitButton(button)
 	button:SetAllPoints()
 
 	local parent = button:GetParent()
@@ -117,20 +125,20 @@ function MythicClick:InitButton(button)
 	highlight:Hide()
 	button.highlight = highlight
 
-	button:SetScript("OnEnter", function(frame)
-		local p = frame:GetParent()
+	button:SetScript("OnEnter", function(self)
+		local p = self:GetParent()
 		if p and p:GetScript("OnEnter") then
 			p:GetScript("OnEnter")(p)
 		end
 
-		if frame.spellID then
-			frame.highlight:SetAlpha(BORDER_HOVER)
+		if self.spellID then
+			self.highlight:SetAlpha(BORDER_HOVER)
 
 			if GameTooltip:GetOwner() == p then
 				GameTooltip:AddLine(" ")
-				if frame.hasSpell then
+				if self.hasSpell then
 					local teleportText = TOOLTIP_PORT
-					if frame:IsSpellOnCooldown(frame.spellID) then
+					if IsSpellOnCooldown(self.spellID) then
 						teleportText = TOOLTIP_PORT_COOLDOWN
 					end
 					GameTooltip:AddLine(teleportText)
@@ -141,17 +149,17 @@ function MythicClick:InitButton(button)
 		end
 	end)
 
-	button:SetScript("OnLeave", function(frame)
-		local p = frame:GetParent()
+	button:SetScript("OnLeave", function(self)
+		local p = self:GetParent()
 		if p and p:GetScript("OnLeave") then
 			p:GetScript("OnLeave")(p)
 		end
 		GameTooltip:Hide()
-		if frame.spellID then frame.highlight:SetAlpha(BORDER_ALPHA) end
+		if self.spellID then self.highlight:SetAlpha(BORDER_ALPHA) end
 	end)
 end
 
-function MythicClick:GetSpellCooldownInfo(spellID)
+local function GetSpellCooldownInfo(spellID)
 	if not spellID then return 0, 0, 0, 1 end
 
 	local cooldownInfo = C_Spell.GetSpellCooldown(spellID)
@@ -181,12 +189,7 @@ function MythicClick:GetSpellCooldownInfo(spellID)
 	return startLegacy or 0, durationLegacy or 0, enabledLegacy or 0, modRateLegacy or 1
 end
 
-function MythicClick:IsSpellOnCooldown(spellID)
-	local startTime, duration, isEnabled = self:GetSpellCooldownInfo(spellID)
-	return isEnabled ~= 0 and isEnabled ~= false and startTime > 0 and duration > 1.5
-end
-
-function MythicClick:IsDungeonTeleportSpell(spellID)
+local function IsDungeonTeleportSpell(spellID)
 	if not spellID then return false end
 	for _, data in pairs(DUNGEON_DATA) do
 		if data and data[1] == spellID then
@@ -196,23 +199,23 @@ function MythicClick:IsDungeonTeleportSpell(spellID)
 	return false
 end
 
-function MythicClick:ClearButtonCooldown(button)
+local function ClearButtonCooldown(button)
 	if not button or not button.cooldown then return end
 	button.cooldown:SetCooldown(0, 0)
 end
 
-function MythicClick:UpdateButtonCooldown(button)
+local function UpdateButtonCooldown(button)
 	if not button or not button.cooldown then return end
 
 	if not button.spellID or not button.hasSpell then
-		self:ClearButtonCooldown(button)
+		ClearButtonCooldown(button)
 		button.cooldown:Hide()
 		return
 	end
 
-	local startTime, duration, isEnabled, modRate = self:GetSpellCooldownInfo(button.spellID)
+	local startTime, duration, isEnabled, modRate = GetSpellCooldownInfo(button.spellID)
 	if isEnabled == 0 or isEnabled == false or startTime <= 0 or duration <= 1.5 then
-		self:ClearButtonCooldown(button)
+		ClearButtonCooldown(button)
 		button.cooldown:Hide()
 		return
 	end
@@ -221,7 +224,7 @@ function MythicClick:UpdateButtonCooldown(button)
 	button.cooldown:Show()
 end
 
-function MythicClick:GetPlayerCastState()
+local function GetPlayerCastState()
 	local _, _, _, startTimeMS, endTimeMS, _, _, _, spellID = UnitCastingInfo("player")
 	local isChannel = false
 
@@ -247,15 +250,15 @@ function MythicClick:GetPlayerCastState()
 	return spellID, progress
 end
 
-function MythicClick:UpdateButtonCastBar(button)
+local function UpdateButtonCastBar(button)
 	if not button or not button.castBar then return end
 
-	if self.activeCastSpellID and self.castProgress and button.spellID == self.activeCastSpellID then
-		button.castBar:SetValue(self.castProgress)
+	if activeCastSpellID and castProgress and button.spellID == activeCastSpellID then
+		button.castBar:SetValue(castProgress)
 
 		if button.castBarSpark then
 			button.castBarSpark:ClearAllPoints()
-			button.castBarSpark:SetPoint("CENTER", button.castBar, "LEFT", button.castBar:GetWidth() * self.castProgress, 0)
+			button.castBarSpark:SetPoint("CENTER", button.castBar, "LEFT", button.castBar:GetWidth() * castProgress, 0)
 			button.castBarSpark:Show()
 		end
 
@@ -268,69 +271,64 @@ function MythicClick:UpdateButtonCastBar(button)
 	end
 end
 
-function MythicClick:UpdateAllCastBars()
+local function UpdateAllCastBars()
 	if not ChallengesFrame or not ChallengesFrame.DungeonIcons then return end
 	for _, icon in ipairs(ChallengesFrame.DungeonIcons) do
 		local button = icon.__mythicClickButton
 		if button then
-			self:UpdateButtonCastBar(button)
+			UpdateButtonCastBar(button)
 		end
 	end
 end
 
-function MythicClick:UpdateAllCooldowns()
+local function UpdateAllCooldowns()
 	if not ChallengesFrame or not ChallengesFrame.DungeonIcons then return end
 	for _, icon in ipairs(ChallengesFrame.DungeonIcons) do
 		local button = icon.__mythicClickButton
 		if button then
-			self:UpdateButtonCooldown(button)
+			UpdateButtonCooldown(button)
 		end
 	end
 end
 
-function MythicClick:OnCastUpdate(elapsed)
-	self.castUpdateElapsed = (self.castUpdateElapsed or 0) + elapsed
-	if self.castUpdateElapsed < 0.05 then return end
-	self.castUpdateElapsed = 0
-
-	self:RefreshCastState()
-end
-
-function MythicClick:RefreshCastState()
-	local spellID, progress = self:GetPlayerCastState()
-	self.activeCastSpellID = spellID
-	self.castProgress = progress
+local function RefreshCastState()
+	local spellID, progress = GetPlayerCastState()
+	activeCastSpellID = spellID
+	castProgress = progress
 
 	if spellID and ChallengesFrame and ChallengesFrame:IsShown() then
-		if not self.castingUpdateActive then
-			self.castingUpdateActive = true
-			self:SetScript("OnUpdate", function(frame, elapsed)
-				frame:OnCastUpdate(elapsed)
+		if not castingUpdateActive then
+			castingUpdateActive = true
+			frame:SetScript("OnUpdate", function(_, elapsed)
+				castUpdateElapsed = castUpdateElapsed + elapsed
+				if castUpdateElapsed < 0.05 then return end
+				castUpdateElapsed = 0
+				RefreshCastState()
 			end)
 		end
-	elseif self.castingUpdateActive then
-		self.castingUpdateActive = false
-		self:SetScript("OnUpdate", nil)
+	elseif castingUpdateActive then
+		castingUpdateActive = false
+		frame:SetScript("OnUpdate", nil)
 	end
 
-	self:UpdateAllCastBars()
+	UpdateAllCastBars()
 end
 
-function MythicClick:GetOrCreateButton(icon)
+local function GetOrCreateButton(icon)
 	if icon.__mythicClickButton then return icon.__mythicClickButton end
 	local button = CreateFrame("Button", nil, icon, "InsecureActionButtonTemplate")
-	self:InitButton(button)
+	InitButton(button)
 	icon.__mythicClickButton = button
 	return button
 end
 
-function MythicClick:ProcessIcon(icon)
+local function ProcessIcon(icon)
 	if InCombatLockdown() then return end
 
 	local mapID = icon.mapID
 	local data = mapID and DUNGEON_DATA[mapID] or nil
 	local spellID = data and data[1] or nil
-	local button = self:GetOrCreateButton(icon)
+	local button = GetOrCreateButton(icon)
 	button.mapID = mapID
 	button.spellID = spellID
 	if button.castBarSpellTex then
@@ -346,7 +344,7 @@ function MythicClick:ProcessIcon(icon)
 			button.castBarSpellTex:Hide()
 		end
 	end
-	local hasSpell = spellID and self:IsSpellKnown(spellID)
+	local hasSpell = spellID and IsSpellKnown(spellID)
 	button.hasSpell = hasSpell
 
 	if hasSpell then
@@ -368,56 +366,54 @@ function MythicClick:ProcessIcon(icon)
 		button:SetAttribute("macrotext2", nil)
 	end
 
-	self:UpdateButtonCastBar(button)
-	self:UpdateButtonCooldown(button)
+	UpdateButtonCastBar(button)
+	UpdateButtonCooldown(button)
 end
 
-function MythicClick:OnChallengesFrameUpdate()
+local function OnChallengesFrameUpdate()
 	if not ChallengesFrame or not ChallengesFrame.DungeonIcons then return end
-	self:RefreshCastState()
+	RefreshCastState()
 	for _, icon in ipairs(ChallengesFrame.DungeonIcons) do
-		self:ProcessIcon(icon)
+		ProcessIcon(icon)
 	end
 end
 
-MythicClick:RegisterEvent("ADDON_LOADED")
-MythicClick:RegisterEvent("SPELLS_CHANGED")
-MythicClick:RegisterEvent("PLAYER_REGEN_ENABLED")
-MythicClick:RegisterEvent("SPELL_UPDATE_COOLDOWN")
-MythicClick:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
-MythicClick:RegisterEvent("UNIT_SPELLCAST_START")
-MythicClick:RegisterEvent("UNIT_SPELLCAST_STOP")
-MythicClick:RegisterEvent("UNIT_SPELLCAST_FAILED")
-MythicClick:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
-MythicClick:RegisterEvent("UNIT_SPELLCAST_DELAYED")
-MythicClick:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
-MythicClick:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
-MythicClick:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
-MythicClick:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-MythicClick:SetScript("OnEvent", function(self, event, ...)
+frame:RegisterEvent("ADDON_LOADED")
+frame:RegisterEvent("SPELLS_CHANGED")
+frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+frame:RegisterEvent("SPELL_UPDATE_COOLDOWN")
+frame:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+frame:RegisterEvent("UNIT_SPELLCAST_START")
+frame:RegisterEvent("UNIT_SPELLCAST_STOP")
+frame:RegisterEvent("UNIT_SPELLCAST_FAILED")
+frame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+frame:RegisterEvent("UNIT_SPELLCAST_DELAYED")
+frame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+frame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+frame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
+frame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+frame:SetScript("OnEvent", function(_, event, ...)
 	if event == "ADDON_LOADED" then
 		local name = ...
-		if name ~= self.name and name ~= "Blizzard_ChallengesUI" then return end
-		if ChallengesFrame and not self.hooked then
-			self.hooked = true
-			hooksecurefunc(ChallengesFrame, "Update", function()
-				self:OnChallengesFrameUpdate()
-			end)
-			self:OnChallengesFrameUpdate()
+		if name ~= addonName and name ~= "Blizzard_ChallengesUI" then return end
+		if ChallengesFrame and not hooked then
+			hooked = true
+			hooksecurefunc(ChallengesFrame, "Update", OnChallengesFrameUpdate)
+			OnChallengesFrameUpdate()
 		end
 	elseif event == "SPELLS_CHANGED" or event == "PLAYER_REGEN_ENABLED" then
-		if not InCombatLockdown() then self:OnChallengesFrameUpdate() end
+		if not InCombatLockdown() then OnChallengesFrameUpdate() end
 	elseif event == "SPELL_UPDATE_COOLDOWN" or event == "ACTIONBAR_UPDATE_COOLDOWN" then
-		self:UpdateAllCooldowns()
+		UpdateAllCooldowns()
 	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
 		local playerUnit, _, spellID = ...
-		if playerUnit == "player" and self:IsDungeonTeleportSpell(spellID) then
-			self:UpdateAllCooldowns()
+		if playerUnit == "player" and IsDungeonTeleportSpell(spellID) then
+			UpdateAllCooldowns()
 		end
 	elseif string.match(event, "^UNIT_SPELLCAST") then
 		local playerUnit = ...
 		if playerUnit == "player" then
-			self:RefreshCastState()
+			RefreshCastState()
 		end
 	end
 end)
