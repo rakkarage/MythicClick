@@ -57,6 +57,35 @@ function MythicClick_OpenLFG(mapID)
 	OpenLFG(mapID)
 end
 
+local function GetSpellCooldownInfo(spellID)
+	if not spellID then return 0, 0, 0, 1 end
+
+	-- Try the modern API first using spellID directly
+	local cooldownInfo = C_Spell.GetSpellCooldown(spellID)
+	if type(cooldownInfo) == "table" then
+		return cooldownInfo.startTime or 0, cooldownInfo.duration or 0, cooldownInfo.isEnabled or 0, cooldownInfo.modRate or 1
+	end
+
+	local spellName = C_Spell.GetSpellName(spellID)
+	if spellName then
+		-- Fallback to modern API using spell name
+		cooldownInfo = C_Spell.GetSpellCooldown(spellName)
+		if type(cooldownInfo) == "table" then
+			return cooldownInfo.startTime or 0, cooldownInfo.duration or 0, cooldownInfo.isEnabled or 0, cooldownInfo.modRate or 1
+		end
+
+		-- Then try the legacy API using spell name
+		local startLegacyByName, durationLegacyByName, enabledLegacyByName, modRateLegacyByName = GetSpellCooldown(spellName)
+		if startLegacyByName and durationLegacyByName then
+			return startLegacyByName or 0, durationLegacyByName or 0, enabledLegacyByName or 0, modRateLegacyByName or 1
+		end
+	end
+
+	-- Legacy fallback using spellID as a last resort
+	local startLegacy, durationLegacy, enabledLegacy, modRateLegacy = GetSpellCooldown(spellID)
+	return startLegacy or 0, durationLegacy or 0, enabledLegacy or 0, modRateLegacy or 1
+end
+
 local function IsSpellKnown(spellID)
 	if not spellID or spellID == 0 then return false end
 	return C_SpellBook.IsSpellInSpellBook(spellID, Enum.SpellBookSpellBank.Player)
@@ -157,36 +186,6 @@ local function InitButton(button)
 		GameTooltip:Hide()
 		if self.spellID then self.highlight:SetAlpha(BORDER_ALPHA) end
 	end)
-end
-
-local function GetSpellCooldownInfo(spellID)
-	if not spellID then return 0, 0, 0, 1 end
-
-	local cooldownInfo = C_Spell.GetSpellCooldown(spellID)
-	if type(cooldownInfo) == "table" then
-		return cooldownInfo.startTime or 0, cooldownInfo.duration or 0, cooldownInfo.isEnabled or 0, cooldownInfo.modRate or 1
-	end
-
-	local spellName = C_Spell.GetSpellName(spellID)
-	if spellName then
-		local cooldownByName = C_Spell.GetSpellCooldown(spellName)
-		if type(cooldownByName) == "table" then
-			return cooldownByName.startTime or 0, cooldownByName.duration or 0, cooldownByName.isEnabled or 0, cooldownByName.modRate or 1
-		end
-
-		local startLegacyByName, durationLegacyByName, enabledLegacyByName, modRateLegacyByName = GetSpellCooldown(spellName)
-		if startLegacyByName and durationLegacyByName then
-			return startLegacyByName or 0, durationLegacyByName or 0, enabledLegacyByName or 0, modRateLegacyByName or 1
-		end
-	end
-
-	local startTime, duration, isEnabled, modRate = C_Spell.GetSpellCooldown(spellID)
-	if startTime and duration then
-		return startTime or 0, duration or 0, isEnabled or 0, modRate or 1
-	end
-
-	local startLegacy, durationLegacy, enabledLegacy, modRateLegacy = GetSpellCooldown(spellID)
-	return startLegacy or 0, durationLegacy or 0, enabledLegacy or 0, modRateLegacy or 1
 end
 
 local function IsDungeonTeleportSpell(spellID)
