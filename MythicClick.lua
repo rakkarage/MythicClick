@@ -1,13 +1,13 @@
 -- 🖱️ MythicClick: Awarded teleports highlighted. Left click: Teleport. Right click: LFG.
 
-local addonName = ...
+local _addonName = ...
 
-local frame = CreateFrame("Frame")
+local _frame = CreateFrame("Frame")
 
-local activeCastSpellID, castProgress
-local castUpdateElapsed = 0
-local castingUpdateActive = false
-local hooked = false
+local _activeCastSpellID, _castProgress
+local _castUpdateElapsed = 0
+local _castingUpdateActive = false
+local _hooked = false
 
 local BORDER_ALPHA = 0.75
 local BORDER_HOVER = 1.0
@@ -252,12 +252,12 @@ end
 local function UpdateButtonCastBar(button)
 	if not button or not button.castBar then return end
 
-	if activeCastSpellID and castProgress and button.spellID == activeCastSpellID then
-		button.castBar:SetValue(castProgress)
+	if _activeCastSpellID and _castProgress and button.spellID == _activeCastSpellID then
+		button.castBar:SetValue(_castProgress)
 
 		if button.castBarSpark then
 			button.castBarSpark:ClearAllPoints()
-			button.castBarSpark:SetPoint("CENTER", button.castBar, "LEFT", button.castBar:GetWidth() * castProgress, 0)
+			button.castBarSpark:SetPoint("CENTER", button.castBar, "LEFT", button.castBar:GetWidth() * _castProgress, 0)
 			button.castBarSpark:Show()
 		end
 
@@ -292,22 +292,22 @@ end
 
 local function RefreshCastState()
 	local spellID, progress = GetPlayerCastState()
-	activeCastSpellID = spellID
-	castProgress = progress
+	_activeCastSpellID = spellID
+	_castProgress = progress
 
 	if spellID and ChallengesFrame and ChallengesFrame:IsShown() then
-		if not castingUpdateActive then
-			castingUpdateActive = true
-			frame:SetScript("OnUpdate", function(_, elapsed)
-				castUpdateElapsed = castUpdateElapsed + elapsed
-				if castUpdateElapsed < 0.05 then return end
-				castUpdateElapsed = 0
+		if not _castingUpdateActive then
+			_castingUpdateActive = true
+			_frame:SetScript("OnUpdate", function(_, elapsed)
+				_castUpdateElapsed = _castUpdateElapsed + elapsed
+				if _castUpdateElapsed < 0.05 then return end
+				_castUpdateElapsed = 0
 				RefreshCastState()
 			end)
 		end
-	elseif castingUpdateActive then
-		castingUpdateActive = false
-		frame:SetScript("OnUpdate", nil)
+	elseif _castingUpdateActive then
+		_castingUpdateActive = false
+		_frame:SetScript("OnUpdate", nil)
 	end
 
 	UpdateAllCastBars()
@@ -377,26 +377,26 @@ local function OnChallengesFrameUpdate()
 	end
 end
 
-frame:RegisterEvent("ADDON_LOADED")
-frame:RegisterEvent("SPELLS_CHANGED")
-frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-frame:RegisterEvent("SPELL_UPDATE_COOLDOWN")
-frame:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
-frame:RegisterEvent("UNIT_SPELLCAST_START")
-frame:RegisterEvent("UNIT_SPELLCAST_STOP")
-frame:RegisterEvent("UNIT_SPELLCAST_FAILED")
-frame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
-frame:RegisterEvent("UNIT_SPELLCAST_DELAYED")
-frame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
-frame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
-frame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
-frame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-frame:SetScript("OnEvent", function(_, event, ...)
+_frame:RegisterEvent("ADDON_LOADED")
+_frame:RegisterEvent("SPELLS_CHANGED")
+_frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+_frame:RegisterEvent("SPELL_UPDATE_COOLDOWN")
+_frame:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+_frame:RegisterEvent("UNIT_SPELLCAST_START")
+_frame:RegisterEvent("UNIT_SPELLCAST_STOP")
+_frame:RegisterEvent("UNIT_SPELLCAST_FAILED")
+_frame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+_frame:RegisterEvent("UNIT_SPELLCAST_DELAYED")
+_frame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+_frame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+_frame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
+_frame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+_frame:SetScript("OnEvent", function(_, event, ...)
 	if event == "ADDON_LOADED" then
 		local name = ...
-		if name ~= addonName and name ~= "Blizzard_ChallengesUI" then return end
-		if ChallengesFrame and not hooked then
-			hooked = true
+		if name ~= _addonName and name ~= "Blizzard_ChallengesUI" then return end
+		if ChallengesFrame and not _hooked then
+			_hooked = true
 			hooksecurefunc(ChallengesFrame, "Update", OnChallengesFrameUpdate)
 			OnChallengesFrameUpdate()
 		end
