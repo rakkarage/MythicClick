@@ -325,8 +325,8 @@ local function ProcessIcon(icon)
 	if InCombatLockdown() then return end
 
 	local mapID = icon.mapID
-	local data = mapID and DUNGEON_DATA[mapID] or nil
-	local spellID = data and data[1] or nil
+	local data = mapID and DUNGEON_DATA[mapID]
+	local spellID = data and data[1]
 	local button = GetOrCreateButton(icon)
 	button.mapID = mapID
 	button.spellID = spellID
